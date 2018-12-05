@@ -12,23 +12,17 @@ fn main() -> io::Result<()> {
     let mut vals = HashSet::new();
 
     let mut res = 0;
+
     loop {
-        let split = buffer.split("\n");
 
-        for s in split {
-            match s.parse::<i32>() {
-                Ok(n) => {
-                    res = res + n;
+        for s in buffer.lines() {
+            let n:i32 = s.parse().unwrap();
 
-                    if vals.contains( &res ) {
-                        println!("{}", res);
-                        return Ok(());
-                    }
-                    else {
-                        vals.insert( res );
-                    }
-                }
-                Err(e) => panic!(e),
+            res = res + n;
+
+            if !vals.insert( res ) {
+                println!("{}", res);
+                return Ok(());
             }
         }
     }
