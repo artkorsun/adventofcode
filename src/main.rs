@@ -1,43 +1,43 @@
+use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use std::fs::File;
-use std::collections::HashMap;
 
 fn main() -> io::Result<()> {
-    let mut f = File::open("src/day_2.data")?;
-    //let mut f = File::open("src/test.data")?;
+    let mut f = File::open("src/test.data")?;
     let mut buffer = String::new();
 
     f.read_to_string(&mut buffer)?;
 
-    let mut with_2 = 0;
-    let mut with_3 = 0;
+    loop {
+        let mut lines = buffer.lines();
+        let first_line = lines.next();
 
-    for s in buffer.lines() {
-        let mut vals = HashMap::new();
-        for c in s.chars() {
-            
-            let val = vals.entry(c).or_insert( 0 );
-            *val += 1;
+        if first_line.is_none() {
+            println!("Nothing found");
+            return Ok(());
         }
 
-        let mut _2 = false;
-        let mut _3 = false;
+        let first_line = first_line.unwrap();
 
-        for v in vals.values() {
-            _2 = _2 || *v == 2;
-            _3 = _3 || *v == 3;
-        }
+        'outer: for s in lines {
+            let mut res = String::new();
+            let mut mismatch_found = false;
+            for c in first_line.char_indices() {
+                let i = c.0;
 
-        if _2 {
-            with_2 += 1;
-        }
+                if c.1 == s[i..i].chars().next().unwrap() {
+                    res.push(c.1);
+                } else {
+                    if mismatch_found {
+                        continue 'outer;
+                    } else {
+                        mismatch_found = true;
+                    }
+                }
 
-        if _3 {
-            with_3 += 1;
+                println!("{}", res);
+                return Ok(());
+            }
         }
     }
-
-    println!("{}", with_2 * with_3);
-    return Ok(());
 }
