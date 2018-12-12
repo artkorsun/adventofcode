@@ -97,5 +97,23 @@ fn main() -> io::Result<()> {
         }
     }
 
+    // 'outer: for r1 in &rects {
+
+    //     for r2 in &rects {
+    //         if r1.id == r2.id {
+    //             continue;
+    //         }
+
+    //         if r1.intersect(&r2).is_some() {
+    //             continue 'outer;
+    //         }
+    //     }
+
+    //     println!("Result: {}", r1.id);
+    //     return Ok(());
+    // }
+
+    // println!("Nothing found");
+
     return Ok(());
 }
