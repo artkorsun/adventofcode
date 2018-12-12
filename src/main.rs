@@ -1,10 +1,10 @@
 extern crate regex;
 
 use regex::Regex;
+use std::cmp;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use std::cmp;
 
 #[derive(Debug)]
 struct Rect {
@@ -29,8 +29,7 @@ fn parse_rect(data: &str) -> Rect {
 }
 
 impl Rect {
-    fn intersect(&self, other: Rect) -> Option<Rect> {
-
+    fn intersect(&self, other: &Rect) -> Option<Rect> {
         if self.left + self.width <= other.left {
             return None;
         }
@@ -47,54 +46,95 @@ impl Rect {
             return None;
         }
 
-        let left = cmp::max( self.left, other.left );
-        let top = cmp::max( self.top, other.top );
-        let width = cmp::min( self.left + self.width - left, other.left + other.width - left );
-        let height =  cmp::min( self.top + self.height - top, other.top + other.height - top);
+        let left = cmp::max(self.left, other.left);
+        let top = cmp::max(self.top, other.top);
+        let width = cmp::min(
+            self.left + self.width - left,
+            other.left + other.width - left,
+        );
+        let height = cmp::min(self.top + self.height - top, other.top + other.height - top);
 
-        Some( Rect{ left, top, width, height } )
+        Some(Rect {
+            left,
+            top,
+            width,
+            height,
+        })
     }
 }
 
 fn main() -> io::Result<()> {
-    let mut f = File::open("src/test.data")?;
+    let mut f = File::open("src/day_3.data")?;
     let mut buffer = String::new();
 
     f.read_to_string(&mut buffer)?;
 
-    let mut lines_iterator = buffer.lines();
-    let mut temp_iterator;
+    let mut rects = Vec::new();
+
+    for line in buffer.lines() {
+        let rect = parse_rect(&line);
+        rects.push(rect);
+    }
 
     let mut intersects = Vec::new();
 
-    loop {
-        let first_line = lines_iterator.next();
+    let mut left = std::u32::MAX;
+    let mut right = 0;
+    let mut top = std::u32::MAX;
+    let mut bottom = 0;
 
-        if first_line.is_none() {
+    let mut rect_iterator = rects.iter();
+    let mut temp_iterator;
+
+    loop {
+        let rect_1 = rect_iterator.next();
+
+        if rect_1.is_none() {
             break;
         }
 
-        temp_iterator = lines_iterator.clone();
+        temp_iterator = rect_iterator.clone();
 
-        let first_line = first_line.unwrap();
+        let rect_1 = rect_1.unwrap();
 
-        let rect = parse_rect(&first_line);
+        for rect_2 in temp_iterator {
+            match rect_1.intersect(rect_2) {
+                Some(r) => {
+                    left = cmp::min(left, r.left);
+                    right = cmp::max(right, r.left + r.width);
+                    top = cmp::min(top, r.top);
+                    bottom = cmp::max(bottom, r.top + r.height);
 
-        println!("Current rect: {:?}", rect);
-
-        for s in temp_iterator {
-            let rect_2 = parse_rect(&s);
-
-            match rect.intersect( rect_2 ) {
-                Some( r ) => intersects.push( r ),
-                None => continue
+                    intersects.push(r)
+                }
+                None => continue,
             }
         }
     }
 
+    let mut matrix = vec![vec![0u8; (bottom - top) as usize]; (right - left) as usize];
+
     for r in intersects {
-        println!("  Processed rect: {:?}", r);
+        let relative_left = r.left - left;
+        let relative_top = r.top - top;
+
+        for x in relative_left..relative_left + r.width {
+            for y in relative_top..relative_top + r.height {
+                matrix[x as usize][y as usize] = 1;
+            }
+        }
     }
+
+    let mut count = 0;
+    for i in matrix {
+        for j in i {
+            if j == 1 {
+                count += 1;
+            }
+        }
+    }
+
+    println!("res: {:?}", count);
 
     return Ok(());
 }
