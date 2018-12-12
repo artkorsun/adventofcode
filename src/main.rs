@@ -79,41 +79,23 @@ fn main() -> io::Result<()> {
         rects.push(rect);
     }
 
-    loop {
-        let rect = rects.pop().unwrap();
+    'outer: for r1 in &rects {
 
-        let len = rects.len();
+        for r2 in &rects {
+            if r1.id == r2.id {
+                continue;
+            }
 
-        if len == 0 {
-            println!("Result: {}", rect.id);
-            break;
+            if r1.intersect(&r2).is_some() {
+                continue 'outer;
+            }
         }
 
-        rects.retain(|ref r| rect.intersect(r).is_none());
-
-        if rects.len() == len {
-            println!("Result: {}", rect.id);
-            break;
-        }
+        println!("Result: {}", r1.id);
+        return Ok(());
     }
 
-    // 'outer: for r1 in &rects {
-
-    //     for r2 in &rects {
-    //         if r1.id == r2.id {
-    //             continue;
-    //         }
-
-    //         if r1.intersect(&r2).is_some() {
-    //             continue 'outer;
-    //         }
-    //     }
-
-    //     println!("Result: {}", r1.id);
-    //     return Ok(());
-    // }
-
-    // println!("Nothing found");
+    println!("Nothing found");
 
     return Ok(());
 }
