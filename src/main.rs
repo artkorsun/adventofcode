@@ -1,101 +1,134 @@
+extern crate chrono;
 extern crate regex;
 
+use chrono::{NaiveDateTime, Timelike};
+
 use regex::Regex;
-use std::cmp;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
+use std::collections::HashMap;
+
 #[derive(Debug)]
-struct Rect {
-    id: u32,
-    left: u32,
-    top: u32,
-    width: u32,
-    height: u32,
+struct Record {
+    datetime: NaiveDateTime,
+    content: String,
 }
 
-fn parse_rect(data: &str) -> Rect {
-    let re = Regex::new(r"#(\d+)\s+.*@\s+(\d+),(\d+):\s+(\d+)x(\d+)").unwrap();
+#[derive(Debug)]
+struct Range {
+    from: u32,
+    to: u32,
+}
+
+fn parse_record(data: &str) -> Record {
+    let re = Regex::new(r"\[(.*)\] (.*)").unwrap();
 
     match re.captures(data) {
-        Some(caps) => Rect {
-            id: caps[1].parse().unwrap(),
-            left: caps[2].parse().unwrap(),
-            top: caps[3].parse().unwrap(),
-            width: caps[4].parse().unwrap(),
-            height: caps[5].parse().unwrap(),
+        Some(caps) => Record {
+            datetime: NaiveDateTime::parse_from_str(&caps[1], "%Y-%m-%d %H:%M").unwrap(),
+            content: caps[2].to_string(),
         },
         None => panic!(),
     }
 }
 
-impl Rect {
-    fn intersect(&self, other: &Rect) -> Option<Rect> {
-        if self.left + self.width <= other.left {
-            return None;
-        }
-
-        if other.left + other.width <= self.left {
-            return None;
-        }
-
-        if self.top + self.height <= other.top {
-            return None;
-        }
-
-        if other.top + other.height <= self.top {
-            return None;
-        }
-
-        let left = cmp::max(self.left, other.left);
-        let top = cmp::max(self.top, other.top);
-        let width = cmp::min(
-            self.left + self.width - left,
-            other.left + other.width - left,
-        );
-        let height = cmp::min(self.top + self.height - top, other.top + other.height - top);
-
-        Some(Rect {
-            id: 0,
-            left,
-            top,
-            width,
-            height,
-        })
-    }
-}
-
 fn main() -> io::Result<()> {
-    let mut f = File::open("src/day_3.data")?;
+    let mut f = File::open("src/day_4.data")?;
     let mut buffer = String::new();
 
     f.read_to_string(&mut buffer)?;
 
-    let mut rects = Vec::new();
+    let mut records = Vec::new();
 
     for line in buffer.lines() {
-        let rect = parse_rect(&line);
-        rects.push(rect);
+        let record = parse_record(&line);
+        records.push(record);
     }
 
-    'outer: for r1 in &rects {
+    records.sort_by(|a, b| a.datetime.cmp(&b.datetime));
 
-        for r2 in &rects {
-            if r1.id == r2.id {
-                continue;
+    let mut current_guard_id: Option<u32> = None;
+    let mut fall_asleep_time: Option<NaiveDateTime> = None;
+
+    let mut guard_sleeps = HashMap::new();
+    let guard_id_re = Regex::new(r".*#(\d+).*").unwrap();
+
+    for r in records {
+        if r.content == "falls asleep" {
+            if current_guard_id.is_none() {
+                println!("Unknown guard id");
+                panic!();
             }
 
-            if r1.intersect(&r2).is_some() {
-                continue 'outer;
+            fall_asleep_time = Some(r.datetime);
+        } else if r.content == "wakes up" {
+            if current_guard_id.is_none() {
+                println!("Unknown guard id");
+                panic!();
+            }
+
+            if fall_asleep_time.is_none() {
+                println!("No fall asleep event before waking up");
+                panic!();
+            }
+
+            let guard_data = guard_sleeps
+                .entry(current_guard_id.unwrap())
+                .or_insert(Vec::new());
+
+            guard_data.push(Range {
+                from: fall_asleep_time.unwrap().minute(),
+                to: r.datetime.minute(),
+            });
+            fall_asleep_time = None;
+        } else if r.content.starts_with("Guard") {
+            match guard_id_re.captures(&r.content) {
+                Some(caps) => current_guard_id = Some(caps[1].parse().unwrap()),
+                None => panic!(),
             }
         }
-
-        println!("Result: {}", r1.id);
-        return Ok(());
     }
 
-    println!("Nothing found");
+    let mut guard_id_with_most_sleeps = 0;
+    let mut most_sleeps = 0;
+
+    for (guard_id, sleeps) in &guard_sleeps {
+        let mut cur_sleeps = 0;
+        for sleep in sleeps {
+            cur_sleeps += sleep.to - sleep.from;
+        }
+        if cur_sleeps > most_sleeps {
+            guard_id_with_most_sleeps = *guard_id;
+            most_sleeps = cur_sleeps;
+        }
+    }
+
+    let mut sleep_per_minute = vec![0; 60];
+    let sleeps = guard_sleeps.get(&guard_id_with_most_sleeps).unwrap();
+
+    for s in sleeps {
+        for m in s.from as usize..s.to as usize {
+            sleep_per_minute[m] += 1;
+        }
+    }
+
+    let mut max_minute = 0;
+    let mut minute_idx = 0;
+    for (i, m) in sleep_per_minute.iter().enumerate() {
+        if m > &max_minute {
+            minute_idx = i;
+            max_minute = *m;
+        }
+    }
+
+    println!(
+        "\nGuard_id: {:?}\nMinute: {:?}\n\nResult: {}",
+        guard_id_with_most_sleeps,
+        minute_idx,
+        guard_id_with_most_sleeps * minute_idx as u32
+    );
 
     return Ok(());
 }
