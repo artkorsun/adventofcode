@@ -92,35 +92,37 @@ fn main() -> io::Result<()> {
     }
 
     let mut guard_id_with_most_sleeps = 0;
-    let mut most_sleeps = 0;
-
-    for (guard_id, sleeps) in &guard_sleeps {
-        let mut cur_sleeps = 0;
-        for sleep in sleeps {
-            cur_sleeps += sleep.to - sleep.from;
-        }
-        if cur_sleeps > most_sleeps {
-            guard_id_with_most_sleeps = *guard_id;
-            most_sleeps = cur_sleeps;
-        }
-    }
-
-    let mut sleep_per_minute = vec![0; 60];
-    let sleeps = guard_sleeps.get(&guard_id_with_most_sleeps).unwrap();
-
-    for s in sleeps {
-        for m in s.from as usize..s.to as usize {
-            sleep_per_minute[m] += 1;
-        }
-    }
-
     let mut max_minute = 0;
     let mut minute_idx = 0;
-    for (i, m) in sleep_per_minute.iter().enumerate() {
-        if m > &max_minute {
-            minute_idx = i;
-            max_minute = *m;
+
+    let mut sleep_per_minute = vec![0; 60];
+
+    for (guard_id, sleeps) in &guard_sleeps {
+        for s in sleeps {
+            for m in s.from as usize..s.to as usize {
+                sleep_per_minute[m] += 1;
+            }
         }
+
+        let mut current_max_minute = 0;
+        let mut current_minute_idx = 0;
+
+        for (i, m) in sleep_per_minute.iter().enumerate() {
+            if m > &current_max_minute {
+                current_minute_idx = i;
+                current_max_minute = *m;
+            }
+        }
+
+        if current_max_minute > max_minute {
+            max_minute = current_max_minute;
+            minute_idx = current_minute_idx;
+
+            guard_id_with_most_sleeps = *guard_id;
+        }
+
+        sleep_per_minute.clear();
+        sleep_per_minute.resize(60, 0);
     }
 
     println!(
