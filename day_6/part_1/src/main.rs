@@ -2,8 +2,6 @@ extern crate regex;
 
 use regex::Regex;
 use std::cmp;
-use std::collections::HashMap;
-use std::collections::HashSet;
 
 #[derive(Debug)]
 struct Point {
@@ -52,58 +50,34 @@ fn main() {
 
     let mut matrix = vec![vec![None;bottom_right.y - left_top.y + 1];bottom_right.x - left_top.x + 1];
     
-    'col: for x in 0..bottom_right.x - left_top.x + 1{
-        'row: for y in 0..bottom_right.y - left_top.y + 1{
-            let mut point_per_distance = HashMap::new();
+    for x in 0..bottom_right.x - left_top.x + 1{
+        for y in 0..bottom_right.y - left_top.y + 1{
+            let mut total_distance = 0;
 
-            for (i, p) in points.iter().enumerate() {
-                
-                if x == p.x - left_top.x && y == p.y - left_top.y {
-                    matrix[x][y] = Some(i);
-                    continue 'row;
-                }
-
+            for p in &points {            
                 let dist = calc_distance(x as i32, (p.x - left_top.x) as i32, y as i32, (p.y - left_top.y) as i32);
-                let points = point_per_distance.entry(dist).or_insert(vec![]);
-                points.push(i);
+                total_distance += dist;
             }
 
-            let min_dist = point_per_distance.keys().min().unwrap();
-            let points_with_mit_distance = point_per_distance.get( min_dist ).unwrap();
-
-            if points_with_mit_distance.len() == 1 {
-                matrix[x][y] = Some(points_with_mit_distance[0]);
-            }
+            matrix[x][y] = Some(total_distance);
         }
     }
 
-    let mut area_size_per_point = HashMap::new();
-    let mut points_with_infinite_area = HashSet::new();
+    let mut count = 0;
 
     for (x, col) in matrix.iter().enumerate() {
         for (y, _row) in col.iter().enumerate() {
 
             match matrix[x][y] {
-                Some(index) => {
-                let vals = area_size_per_point.entry(index).or_insert(0);
-                    *vals += 1;
-
-                    if x == 0 || y == 0 || x == matrix.len() - 1 || y == col.len() - 1 {
-                        points_with_infinite_area.insert(index);
-                    }   
+                Some(distance) => {
+                    if distance < 10000 {
+                        count += 1;
+                    }
                 },
                 _ => continue
             }
         }
     }
 
-    let mut max_area = 0;
-    for (i, area_size) in &area_size_per_point {
-        
-        if !points_with_infinite_area.contains(i) {
-            max_area = cmp::max(max_area, *area_size);
-        }
-    }
-
-    print!("{:?}\n", max_area);
+    print!("{:?}", count);
 }
