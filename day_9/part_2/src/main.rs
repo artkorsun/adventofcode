@@ -18,7 +18,7 @@ fn parse_input(data: &str) -> (i32, i32) {
 
 #[derive(Debug)]
 struct Marble<'a> {
-    value: i32,
+    value: u64,
     next: Cell<Option<&'a Marble<'a>>>,
     prev: Cell<Option<&'a Marble<'a>>>,
 } 
@@ -37,7 +37,7 @@ impl<'a> Marble<'a> {
         marble
     }
 
-    fn new(value: i32, arena: &'a Arena<Marble<'a>>, current: &'a Marble<'a>) -> &'a Marble<'a> {
+    fn new(value: u64, arena: &'a Arena<Marble<'a>>, current: &'a Marble<'a>) -> &'a Marble<'a> {
         let marble = arena.alloc(Marble {
             value,
             next: Cell::new(None),
@@ -54,7 +54,7 @@ impl<'a> Marble<'a> {
         marble
     }
 
-    fn take_7th_counterclock_wise_and_new_current(current: &'a Marble<'a>) -> (i32, &'a Marble<'a>) {
+    fn take_7th_counterclock_wise_and_new_current(current: &'a Marble<'a>) -> (u64, &'a Marble<'a>) {
 
         let mut seventh = current;
 
@@ -81,7 +81,6 @@ fn main() {
 
     let zero_marble = Marble::zero(&arena);
         
-    
     let mut current = zero_marble;
     
     let mut player = 1;
@@ -91,19 +90,19 @@ fn main() {
     for i in 1..input.1 + 1 {
         
         if i % 23 == 0 {
-            let mut points = i;
+            let mut points = i as u64;
             let res = Marble::take_7th_counterclock_wise_and_new_current(current);
 
             points += res.0;
             current = res.1;
                 
-            let player_points = score.entry(player).or_insert(0);
+            let player_points = score.entry(player).or_insert(0 as u64);
             *player_points += points;
 
             continue;
         }
 
-        let marble = Marble::new(i, &arena, current);
+        let marble = Marble::new(i as u64, &arena, current);
         current = marble;
 
         if player == input.0 {
